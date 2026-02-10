@@ -24,4 +24,5 @@ target
 # Added by cargo
 *.md
 .env
+config.json
 /target
