@@ -64,6 +64,10 @@ impl ChangelogService {
             .generate_changelog(&repo.full_name(), &context_text, &period.description())
             .await?;
 
+        // Validate AI output to avoid silently writing empty changelog files
+        if changelog.trim().is_empty() {
+            anyhow::bail!("AI-generated changelog is empty; please try again or check the AI provider configuration");
+        }
         // 5. Save to file
         let path = self.save_changelog(repo, &changelog)?;
 
