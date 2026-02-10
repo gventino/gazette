@@ -2,7 +2,7 @@
   <img src="https://gcdnb.pbrd.co/images/jLFhIXvtt6Qc.png?o=1" alt="Gazette Logo" width="200">
 </p>
 
-<h1 align="center">Gazette CLI</h1>
+<h1 align="center">Gazette</h1>
 
 <p align="center">
   <strong>AI-powered changelog generator from GitHub Pull Requests</strong>
