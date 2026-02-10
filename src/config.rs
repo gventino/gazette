@@ -11,6 +11,113 @@ use serde::{Deserialize, Serialize};
 const CONFIG_FILE: &str = "config.json";
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
+pub enum AIProvider {
+    #[default]
+    Gemini,
+    OpenAI,
+    Anthropic,
+    Ollama,
+}
+
+impl AIProvider {
+    /// Returns all available AI providers
+    pub fn all() -> Vec<Self> {
+        vec![Self::Gemini, Self::OpenAI, Self::Anthropic, Self::Ollama]
+    }
+
+    /// Returns the environment variable name for the API key
+    pub fn api_key_env_var(&self) -> &'static str {
+        match self {
+            Self::Gemini => "GEMINI_API_KEY",
+            Self::OpenAI => "OPENAI_API_KEY",
+            Self::Anthropic => "ANTHROPIC_API_KEY",
+            Self::Ollama => "OLLAMA_HOST",
+        }
+    }
+
+    /// Returns a user-friendly prompt for the API key
+    pub fn api_key_prompt(&self) -> &'static str {
+        match self {
+            Self::Gemini => "Enter your Gemini API key:",
+            Self::OpenAI => "Enter your OpenAI API key:",
+            Self::Anthropic => "Enter your Anthropic API key:",
+            Self::Ollama => "Enter your Ollama host (default: http://localhost:11434):",
+        }
+    }
+
+    /// Returns default value for the credential (if any)
+    pub fn default_value(&self) -> Option<&'static str> {
+        match self {
+            Self::Ollama => Some("http://localhost:11434"),
+            _ => None,
+        }
+    }
+
+    /// Returns available models for this provider
+    pub fn available_models(&self) -> Vec<&'static str> {
+        match self {
+            Self::Gemini => vec![
+                "gemini-2.0-flash",
+                "gemini-2.0-flash-lite",
+                "gemini-1.5-pro",
+                "gemini-1.5-flash",
+            ],
+            Self::OpenAI => vec![
+                "gpt-4o",
+                "gpt-4o-mini",
+                "gpt-4-turbo",
+                "gpt-4",
+                "gpt-3.5-turbo",
+            ],
+            Self::Anthropic => vec![
+                "claude-sonnet-4-20250514",
+                "claude-3-5-sonnet-20241022",
+                "claude-3-5-haiku-20241022",
+                "claude-3-opus-20240229",
+            ],
+            Self::Ollama => vec![
+                "llama3.2",
+                "llama3.1",
+                "mistral",
+                "codellama",
+                "deepseek-coder",
+            ],
+        }
+    }
+
+    /// Returns the default model for this provider
+    pub fn default_model(&self) -> &'static str {
+        match self {
+            Self::Gemini => "gemini-2.0-flash",
+            Self::OpenAI => "gpt-4o",
+            Self::Anthropic => "claude-sonnet-4-20250514",
+            Self::Ollama => "llama3.2",
+        }
+    }
+
+    /// Returns a short name for display
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            Self::Gemini => "Gemini",
+            Self::OpenAI => "OpenAI",
+            Self::Anthropic => "Claude",
+            Self::Ollama => "Ollama",
+        }
+    }
+}
+
+impl fmt::Display for AIProvider {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Gemini => write!(f, "Gemini (Google)"),
+            Self::OpenAI => write!(f, "OpenAI (GPT)"),
+            Self::Anthropic => write!(f, "Anthropic (Claude)"),
+            Self::Ollama => write!(f, "Ollama (Local)"),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
 #[serde(tag = "type", content = "value")]
 pub enum TimePeriod {
     LastHour,
@@ -69,8 +176,6 @@ impl fmt::Display for TimePeriod {
     }
 }
 
-// ===== Repo =====
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Repo {
     pub owner: String,
@@ -106,14 +211,25 @@ impl fmt::Display for Repo {
     }
 }
 
-// ===== Config =====
-
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Config {
     #[serde(default)]
     pub repos: Vec<Repo>,
     #[serde(default)]
     pub time_period: TimePeriod,
+    #[serde(default)]
+    pub ai_provider: AIProvider,
+    #[serde(default)]
+    pub ai_model: Option<String>,
+}
+
+impl Config {
+    /// Returns the AI model, falling back to provider default
+    pub fn get_ai_model(&self) -> String {
+        self.ai_model
+            .clone()
+            .unwrap_or_else(|| self.ai_provider.default_model().to_string())
+    }
 }
 
 impl Config {
@@ -132,6 +248,8 @@ impl Config {
             let config = Config {
                 repos,
                 time_period: TimePeriod::default(),
+                ai_provider: AIProvider::default(),
+                ai_model: None,
             };
             config.save()?;
 
@@ -160,8 +278,6 @@ impl Config {
         Ok(())
     }
 }
-
-// ===== Repo Management Functions =====
 
 pub fn load_repos() -> Result<Vec<Repo>> {
     Ok(Config::load()?.repos)
@@ -244,8 +360,6 @@ pub fn list_repos() -> Result<()> {
     Ok(())
 }
 
-// ===== Time Period Configuration =====
-
 #[derive(Debug, Clone)]
 enum TimePeriodOption {
     Preset(TimePeriod),
@@ -319,4 +433,65 @@ fn prompt_custom_period() -> Result<TimePeriod> {
     Ok(TimePeriod::Custom {
         seconds: total_seconds,
     })
+}
+
+pub fn load_ai_provider() -> Result<AIProvider> {
+    Ok(Config::load()?.ai_provider)
+}
+
+pub fn configure_ai_provider() -> Result<AIProvider> {
+    use crate::menu::credentials::ensure_provider_api_key;
+
+    let config = Config::load()?;
+
+    println!(
+        "Current AI provider: {}",
+        config.ai_provider.to_string().cyan()
+    );
+
+    let selection = Select::new("Select AI provider:", AIProvider::all()).prompt()?;
+
+    let mut config = Config::load()?;
+    let provider_changed = config.ai_provider != selection;
+    config.ai_provider = selection;
+
+    // Reset model when provider changes
+    if provider_changed {
+        config.ai_model = None;
+    }
+    config.save()?;
+
+    // Ensure API key is configured for the new provider
+    ensure_provider_api_key(selection)?;
+
+    println!(
+        "{} {}",
+        "✔ AI provider set to".green(),
+        selection.to_string().cyan()
+    );
+
+    Ok(selection)
+}
+
+pub fn configure_ai_model() -> Result<()> {
+    let config = Config::load()?;
+    let provider = config.ai_provider;
+
+    println!("Current model: {}", config.get_ai_model().cyan());
+
+    let models: Vec<String> = provider
+        .available_models()
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    let selection = Select::new("Select AI model:", models).prompt()?;
+
+    let mut config = Config::load()?;
+    config.ai_model = Some(selection.clone());
+    config.save()?;
+
+    println!("{} {}", "✔ AI model set to".green(), selection.cyan());
+
+    Ok(())
 }

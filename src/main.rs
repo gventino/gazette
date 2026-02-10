@@ -1,7 +1,7 @@
+mod ai;
 mod changelog;
 mod cli;
 pub mod config;
-pub mod gemini;
 pub mod github;
 pub mod jira;
 mod menu;
@@ -18,7 +18,10 @@ use inquire::Select;
 use owo_colors::OwoColorize;
 
 use cli::Cli;
-use config::{configure_time_period, list_repos, subscribe_repo, unsubscribe_repo};
+use config::{
+    Config, configure_ai_model, configure_ai_provider, configure_time_period, list_repos,
+    subscribe_repo, unsubscribe_repo,
+};
 use menu::{MainMenuOption, credentials, menu_changelog, menu_credentials};
 
 #[tokio::main]
@@ -54,7 +57,19 @@ fn print_banner() {
         .bold()
     );
 
-    println!("{}", "--- Welcome to Gazette CLI ---".cyan().bold());
+    // Show current configuration
+    if let Ok(config) = Config::load() {
+        println!();
+        print!("{}", "  Period: ".dimmed());
+        println!("{}", config.time_period.to_string().cyan());
+        print!("{}", "  AI: ".dimmed());
+        println!(
+            "{} {}",
+            config.ai_provider.short_name().cyan(),
+            format!("({})", config.get_ai_model()).dimmed()
+        );
+    }
+    println!();
 }
 
 async fn run_main_loop() -> Result<()> {
@@ -72,6 +87,12 @@ async fn run_main_loop() -> Result<()> {
             MainMenuOption::Unsubscribe => unsubscribe_repo()?,
             MainMenuOption::ListRepos => list_repos()?,
             MainMenuOption::ConfigureTimePeriod => configure_time_period()?,
+            MainMenuOption::ChangeAIProvider => {
+                configure_ai_provider()?;
+            }
+            MainMenuOption::ChangeAIModel => {
+                configure_ai_model()?;
+            }
             MainMenuOption::GenerateChangelog => menu_changelog().await?,
             MainMenuOption::UpdateCredentials => menu_credentials()?,
             MainMenuOption::Exit => {
