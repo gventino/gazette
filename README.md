@@ -1,4 +1,12 @@
-# Gazette CLI
+<p align="center">
+  <img src="https://gcdnb.pbrd.co/images/jLFhIXvtt6Qc.png?o=1" alt="Gazette Logo" width="200">
+</p>
+
+<h1 align="center">Gazette CLI</h1>
+
+<p align="center">
+  <strong>AI-powered changelog generator from GitHub Pull Requests</strong>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/rust-2024-orange" alt="Rust 2024">
@@ -6,14 +14,9 @@
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
-**Gazette** is a CLI tool that automatically generates AI-powered changelogs from GitHub Pull Requests, enriched with Jira context.
+---
 
-```
-     ▗▄▄▖ ▗▄▖ ▗▄▄▄▄▖▗▄▄▄▖▗▄▄▄▖▗▄▄▄▖▗▄▄▄▖
-    ▐▌   ▐▌ ▐▌   ▗▞▘▐▌     █    █  ▐▌   
-    ▐▌▝▜▌▐▛▀▜▌ ▗▞▘  ▐▛▀▀▘  █    █  ▐▛▀▀▘
-    ▝▚▄▞▘▐▌ ▐▌▐▙▄▄▄▖▐▙▄▄▖  █    █  ▐▙▄▄▖
-```
+**Gazette** automatically generates well-structured changelogs from your GitHub Pull Requests, enriched with Jira context and summarized by Google Gemini AI.
 
 ## Features
 
@@ -170,6 +173,29 @@ cargo fmt
 cargo clippy
 ```
 
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before each commit.
+
+**Install pre-commit:**
+
+```bash
+# macOS
+brew install prek
+```
+
+**Enable hooks:**
+
+```bash
+prek install
+```
+
+The following checks run automatically on each commit:
+
+- `cargo fmt --check` — Code formatting
+- `cargo clippy -- -D warnings` — Linting with warnings as errors
+- `cargo build` — Build verification (no warnings allowed)
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
@@ -180,4 +206,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 ---
 
-Made with ❤️ and 🦀
+Made with ❤️ and 🦀 ⚙️
