@@ -29,7 +29,7 @@
 ### Quick Install (macOS/Linux)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-username/gazette/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gventino/gazette/main/install.sh | bash
 ```
 
 ### From Source
