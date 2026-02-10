@@ -1,0 +1,15 @@
+{
+  "repos": [
+    {
+      "owner": "gventino",
+      "name": "surreal-weather-hub"
+    },
+    {
+      "owner": "basecamp",
+      "name": "fizzy"
+    }
+  ],
+  "time_period": {
+    "type": "Last24Hours"
+  }
+}
