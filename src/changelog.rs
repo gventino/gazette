@@ -145,12 +145,18 @@ impl ChangelogService {
                 for issue in &ctx.jira_issues {
                     let jira_url = jira_base_url
                         .as_ref()
-                        .map(|base| format!("{}/browse/{}", base.trim_end_matches('/'), issue.key))
-                        .unwrap_or_else(|| issue.key.clone());
-                    output.push_str(&format!(
-                        "- {} ({}): {}\n",
-                        issue.key, jira_url, issue.fields.summary
-                    ));
+                        .map(|base| format!("{}/browse/{}", base.trim_end_matches('/'), issue.key));
+                    if let Some(url) = jira_url {
+                        output.push_str(&format!(
+                            "- {} ({}): {}\n",
+                            issue.key, url, issue.fields.summary
+                        ));
+                    } else {
+                        output.push_str(&format!(
+                            "- {}: {}\n",
+                            issue.key, issue.fields.summary
+                        ));
+                    }
                     if let Some(status) = &issue.fields.status {
                         output.push_str(&format!("  Status: {}\n", status.name));
                     }
