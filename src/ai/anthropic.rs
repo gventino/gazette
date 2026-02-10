@@ -100,14 +100,13 @@ impl AIClient for AnthropicClient {
 
         let text = anthropic_response
             .content
-            .and_then(|blocks| {
+            .map(|blocks| {
                 blocks
                     .into_iter()
                     .filter(|b| b.content_type == "text")
                     .filter_map(|b| b.text)
                     .collect::<Vec<_>>()
-                    .first()
-                    .cloned()
+                    .concat()
             })
             .unwrap_or_default();
 
