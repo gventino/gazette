@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/rust-2026-orange" alt="Rust 2026">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.0.1-blue" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
