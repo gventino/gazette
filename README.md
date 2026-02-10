@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/rust-2024-orange" alt="Rust 2024">
+  <img src="https://img.shields.io/badge/rust-2026-orange" alt="Rust 2026">
   <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/gventino/gazette/main/install.sh | 
 
 ### From Source
 
-Requires [Rust](https://rustup.rs/) (edition 2024).
+Requires [Rust](https://rustup.rs/) (edition 2026).
 
 ```bash
 git clone https://github.com/your-username/gazette.git
