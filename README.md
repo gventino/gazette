@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/gventino/gazette/main/install.sh | 
 Requires [Rust](https://rustup.rs/) (edition 2026).
 
 ```bash
-git clone https://github.com/your-username/gazette.git
+git clone https://github.com/gventino/gazette.git
 cd gazette
 cargo build --release
 cp target/release/gazette /usr/local/bin/
@@ -48,7 +48,7 @@ cp target/release/gazette /usr/local/bin/
 
 ### Manual Download
 
-Download the latest binary from the [Releases](https://github.com/your-username/gazette/releases) page and add it to your PATH.
+Download the latest binary from the [Releases](https://github.com/gventino/gazette/releases) page and add it to your PATH.
 
 ## Configuration
 
