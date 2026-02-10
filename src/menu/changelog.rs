@@ -1,6 +1,8 @@
 use std::fmt;
+use std::sync::Arc;
 
 use anyhow::Result;
+use futures::future::join_all;
 use inquire::Select;
 use owo_colors::OwoColorize;
 
@@ -122,21 +124,43 @@ async fn generate_changelog_all() -> Result<()> {
         return Ok(());
     }
 
-    let service = ChangelogService::new()?;
+    println!(
+        "{} {} repos in parallel...",
+        "Processing".cyan(),
+        repos.len().to_string().yellow()
+    );
 
-    for repo in &repos {
-        println!("\n{} {}", "Processing".cyan(), repo.full_name().yellow());
+    let service = Arc::new(ChangelogService::new()?);
 
-        match service.generate_for_repo(repo, period).await {
+    // Create futures for all repos
+    let futures: Vec<_> = repos
+        .into_iter()
+        .map(|repo| {
+            let service = Arc::clone(&service);
+            async move {
+                let result = service.generate_for_repo(&repo, period).await;
+                (repo, result)
+            }
+        })
+        .collect();
+
+    // Execute all in parallel
+    let results = join_all(futures).await;
+
+    // Print results
+    println!();
+    for (repo, result) in results {
+        match result {
             Ok(path) => {
                 println!(
-                    "{} {}",
-                    "  ✔ Saved:".green(),
-                    path.display().to_string().cyan()
+                    "{} {} → {}",
+                    "✔".green(),
+                    repo.full_name().cyan(),
+                    path.display().to_string().dimmed()
                 );
             }
             Err(e) => {
-                println!("{} {}", "  ✖ Error:".red(), e);
+                println!("{} {} → {}", "✖".red(), repo.full_name().cyan(), e);
             }
         }
     }

@@ -126,9 +126,10 @@ impl ChangelogService {
             }
 
             if let Some(body) = &ctx.pr.body
-                && !body.trim().is_empty() {
-                    output.push_str(&format!("Description:\n{}\n", body));
-                }
+                && !body.trim().is_empty()
+            {
+                output.push_str(&format!("Description:\n{}\n", body));
+            }
 
             if !ctx.jira_issues.is_empty() {
                 output.push_str("\nJira Context:\n");
@@ -138,10 +139,11 @@ impl ChangelogService {
                         output.push_str(&format!("  Status: {}\n", status.name));
                     }
                     if let Some(desc) = issue.description_text()
-                        && !desc.trim().is_empty() {
-                            let truncated: String = desc.chars().take(500).collect();
-                            output.push_str(&format!("  Details: {}\n", truncated));
-                        }
+                        && !desc.trim().is_empty()
+                    {
+                        let truncated: String = desc.chars().take(500).collect();
+                        output.push_str(&format!("  Details: {}\n", truncated));
+                    }
                 }
             }
 
