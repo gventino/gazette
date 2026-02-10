@@ -100,6 +100,12 @@ impl Repo {
     }
 }
 
+impl fmt::Display for Repo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.owner, self.name)
+    }
+}
+
 // ===== Config =====
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -203,30 +209,19 @@ pub fn unsubscribe_repo() -> Result<()> {
         return Ok(());
     }
 
-    let input = Text::new("Repo to unsubscribe (owner/name):").prompt()?;
+    let repos = config.repos.clone();
+    let selected = Select::new("Select repo to unsubscribe:", repos).prompt()?;
 
-    let repo = Repo::from_full_name(&input).context("Invalid format. Use 'owner/name'")?;
-
-    let initial_len = config.repos.len();
     config
         .repos
-        .retain(|r| !(r.owner == repo.owner && r.name == repo.name));
-
-    if config.repos.len() == initial_len {
-        println!(
-            "{} {}",
-            "Not subscribed to".yellow(),
-            repo.full_name().cyan()
-        );
-        return Ok(());
-    }
+        .retain(|r| !(r.owner == selected.owner && r.name == selected.name));
 
     config.save()?;
 
     println!(
         "{} {}",
         "✔ Unsubscribed from".green(),
-        repo.full_name().cyan()
+        selected.full_name().cyan()
     );
 
     Ok(())
