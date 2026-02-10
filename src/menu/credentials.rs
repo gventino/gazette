@@ -8,12 +8,16 @@ use anyhow::Result;
 use inquire::{Confirm, Select, Text};
 use owo_colors::OwoColorize;
 
+use crate::config::{AIProvider, Config, configure_ai_model};
+
 const ENV_FILE: &str = ".env";
 
 #[derive(Debug, Clone, Copy)]
 pub enum CredentialsOption {
     UpdateGithubToken,
-    UpdateGeminiApiKey,
+    UpdateAIProvider,
+    UpdateAIModel,
+    UpdateAIApiKey,
     UpdateJiraCredentials,
     Back,
 }
@@ -22,7 +26,9 @@ impl fmt::Display for CredentialsOption {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UpdateGithubToken => write!(f, "Update GitHub token"),
-            Self::UpdateGeminiApiKey => write!(f, "Update Gemini API key"),
+            Self::UpdateAIProvider => write!(f, "Change AI provider"),
+            Self::UpdateAIModel => write!(f, "Change AI model"),
+            Self::UpdateAIApiKey => write!(f, "Update AI API key"),
             Self::UpdateJiraCredentials => write!(f, "Update Jira credentials"),
             Self::Back => write!(f, "Back to main menu"),
         }
@@ -33,7 +39,9 @@ impl CredentialsOption {
     pub fn all() -> Vec<Self> {
         vec![
             Self::UpdateGithubToken,
-            Self::UpdateGeminiApiKey,
+            Self::UpdateAIProvider,
+            Self::UpdateAIModel,
+            Self::UpdateAIApiKey,
             Self::UpdateJiraCredentials,
             Self::Back,
         ]
@@ -48,9 +56,18 @@ pub fn menu_credentials() -> Result<()> {
             update_github_token()?;
             println!("{}", "✔ GitHub token updated successfully!".green());
         }
-        CredentialsOption::UpdateGeminiApiKey => {
-            update_gemini_api_key()?;
-            println!("{}", "✔ Gemini API key updated successfully!".green());
+        CredentialsOption::UpdateAIProvider => {
+            let provider = select_ai_provider()?;
+            prompt_ai_api_key(provider)?;
+            println!("{}", "✔ AI provider updated successfully!".green());
+        }
+        CredentialsOption::UpdateAIModel => {
+            configure_ai_model()?;
+        }
+        CredentialsOption::UpdateAIApiKey => {
+            let config = Config::load()?;
+            prompt_ai_api_key(config.ai_provider)?;
+            println!("{}", "✔ AI API key updated successfully!".green());
         }
         CredentialsOption::UpdateJiraCredentials => {
             update_jira_credentials()?;
@@ -67,12 +84,82 @@ pub fn load_all_credentials() -> Result<()> {
     load_env_var("GITHUB_TOKEN", "Enter your GitHub token:", true)?;
     println!("{}", "✔ GitHub token loaded".green());
 
-    // Gemini API key (required)
-    load_env_var("GEMINI_API_KEY", "Enter your Gemini API key:", true)?;
-    println!("{}", "✔ Gemini API key loaded".green());
+    // AI provider and API key
+    load_ai_credentials()?;
 
     // Jira credentials (optional)
     load_jira_credentials()?;
+
+    Ok(())
+}
+
+fn load_ai_credentials() -> Result<()> {
+    let mut config = Config::load()?;
+    let provider = config.ai_provider;
+    let env_var = provider.api_key_env_var();
+
+    // Check if we need to select a provider (first run or missing API key)
+    let has_api_key = env::var(env_var).map(|v| !v.is_empty()).unwrap_or(false);
+
+    if !has_api_key {
+        println!(
+            "{}",
+            "AI provider not configured. Let's set it up!".yellow()
+        );
+
+        // Ask user to select AI provider
+        let selected_provider = select_ai_provider()?;
+        config.ai_provider = selected_provider;
+        config.save()?;
+
+        // Prompt for API key
+        prompt_ai_api_key(selected_provider)?;
+    }
+
+    println!(
+        "{} {}",
+        "✔ AI provider:".green(),
+        config.ai_provider.to_string().cyan()
+    );
+
+    Ok(())
+}
+
+fn select_ai_provider() -> Result<AIProvider> {
+    let selection = Select::new("Select AI provider:", AIProvider::all()).prompt()?;
+
+    let mut config = Config::load()?;
+    config.ai_provider = selection;
+    config.save()?;
+
+    Ok(selection)
+}
+
+fn prompt_ai_api_key(provider: AIProvider) -> Result<()> {
+    let env_var = provider.api_key_env_var();
+    let prompt = provider.api_key_prompt();
+
+    let value = if let Some(default) = provider.default_value() {
+        Text::new(prompt).with_default(default).prompt()?
+    } else {
+        Text::new(prompt).prompt()?
+    };
+
+    save_env_var(env_var, &value)?;
+    Ok(())
+}
+
+/// Ensures the API key for the given provider is configured
+/// If not configured, prompts the user to enter it
+pub fn ensure_provider_api_key(provider: AIProvider) -> Result<()> {
+    let env_var = provider.api_key_env_var();
+    let has_api_key = env::var(env_var).map(|v| !v.is_empty()).unwrap_or(false);
+
+    if !has_api_key {
+        println!("{}", format!("{} not configured.", env_var).yellow());
+        prompt_ai_api_key(provider)?;
+        println!("{}", "✔ API key saved".green());
+    }
 
     Ok(())
 }
@@ -139,12 +226,6 @@ fn load_env_var(key: &str, prompt_msg: &str, required: bool) -> Result<Option<St
 pub fn update_github_token() -> Result<()> {
     let token = Text::new("Enter your new GitHub token:").prompt()?;
     save_env_var("GITHUB_TOKEN", &token)?;
-    Ok(())
-}
-
-pub fn update_gemini_api_key() -> Result<()> {
-    let key = Text::new("Enter your new Gemini API key:").prompt()?;
-    save_env_var("GEMINI_API_KEY", &key)?;
     Ok(())
 }
 

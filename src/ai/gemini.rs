@@ -1,10 +1,12 @@
 use std::env;
 
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use super::AIClient;
+
 const GEMINI_API_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL: &str = "gemini-2.0-flash";
 
 /// Gemini API client
 pub struct GeminiClient {
@@ -50,19 +52,21 @@ struct CandidatePart {
 
 impl GeminiClient {
     /// Creates a new Gemini client from environment variable GEMINI_API_KEY
-    pub fn new() -> Result<Self> {
+    pub fn new(model: &str) -> Result<Self> {
         let api_key =
             env::var("GEMINI_API_KEY").context("GEMINI_API_KEY not found in environment")?;
 
         Ok(Self {
             client: reqwest::Client::new(),
             api_key,
-            model: DEFAULT_MODEL.to_string(),
+            model: model.to_string(),
         })
     }
+}
 
-    /// Generates text from a prompt
-    pub async fn generate(&self, prompt: &str) -> Result<String> {
+#[async_trait]
+impl AIClient for GeminiClient {
+    async fn generate(&self, prompt: &str) -> Result<String> {
         let url = format!(
             "{}/{}:generateContent?key={}",
             GEMINI_API_URL, self.model, self.api_key
@@ -109,26 +113,5 @@ impl GeminiClient {
             .unwrap_or_default();
 
         Ok(text)
-    }
-
-    /// Generates a changelog markdown from PR data
-    pub async fn generate_changelog(&self, repo_name: &str, prs_context: &str) -> Result<String> {
-        let prompt = format!(
-            r#"You are a technical writer. Generate a concise markdown changelog for the repository "{repo_name}" based on the following Pull Request information merged in the last 24 hours.
-
-The changelog should:
-- Have a header with the repository name and today's date
-- Group changes by category (Features, Bug Fixes, Improvements, etc.) if applicable
-- Be concise but informative
-- Include PR numbers as clickable markdown links using the provided URLs (e.g., [#123](url))
-- If Jira context is available, mention the ticket purpose briefly
-
-PR Information:
-{prs_context}
-
-Generate only the markdown content, no explanations."#
-        );
-
-        self.generate(&prompt).await
     }
 }

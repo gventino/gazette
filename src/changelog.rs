@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use chrono::Local;
 
-use crate::config::{Repo, TimePeriod};
-use crate::gemini::GeminiClient;
+use crate::ai::{self, AIClient};
+use crate::config::{Config, Repo, TimePeriod};
 use crate::github::{GitHubClient, PullRequest};
 use crate::jira::{JiraClient, JiraIssue, extract_jira_keys};
 
@@ -19,7 +19,7 @@ pub struct PrContext {
 pub struct ChangelogService {
     github: GitHubClient,
     jira: Option<JiraClient>,
-    gemini: GeminiClient,
+    ai_client: Box<dyn AIClient>,
 }
 
 impl ChangelogService {
@@ -27,7 +27,11 @@ impl ChangelogService {
     /// Jira client is optional - if credentials are missing, Jira context will be skipped
     pub fn new() -> Result<Self> {
         let github = GitHubClient::new()?;
-        let gemini = GeminiClient::new()?;
+
+        // Load AI provider and model from config
+        let config = Config::load()?;
+        let model = config.get_ai_model();
+        let ai_client = ai::create_ai_client(config.ai_provider, &model)?;
 
         // Jira is optional
         let jira = JiraClient::new().ok();
@@ -35,7 +39,7 @@ impl ChangelogService {
         Ok(Self {
             github,
             jira,
-            gemini,
+            ai_client,
         })
     }
 
@@ -51,15 +55,19 @@ impl ChangelogService {
         // 2. Fetch Jira context for each PR
         let pr_contexts = self.enrich_with_jira(&prs).await;
 
-        // 3. Aggregate data into text format for Gemini
+        // 3. Aggregate data into text format for AI
         let context_text = self.format_pr_context(&pr_contexts);
 
-        // 4. Generate changelog with Gemini
+        // 4. Generate changelog with AI
         let changelog = self
-            .gemini
-            .generate_changelog(&repo.full_name(), &context_text)
+            .ai_client
+            .generate_changelog(&repo.full_name(), &context_text, &period.description())
             .await?;
 
+        // Validate AI output to avoid silently writing empty changelog files
+        if changelog.trim().is_empty() {
+            anyhow::bail!("AI-generated changelog is empty; please try again or check the AI provider configuration");
+        }
         // 5. Save to file
         let path = self.save_changelog(repo, &changelog)?;
 
@@ -110,8 +118,9 @@ impl ChangelogService {
         contexts
     }
 
-    /// Formats PR contexts as text for Gemini
+    /// Formats PR contexts as text for AI
     fn format_pr_context(&self, contexts: &[PrContext]) -> String {
+        let jira_base_url = std::env::var("JIRA_URL").ok();
         let mut output = String::new();
 
         for ctx in contexts {
@@ -134,7 +143,20 @@ impl ChangelogService {
             if !ctx.jira_issues.is_empty() {
                 output.push_str("\nJira Context:\n");
                 for issue in &ctx.jira_issues {
-                    output.push_str(&format!("- {}: {}\n", issue.key, issue.fields.summary));
+                    let jira_url = jira_base_url
+                        .as_ref()
+                        .map(|base| format!("{}/browse/{}", base.trim_end_matches('/'), issue.key));
+                    if let Some(url) = jira_url {
+                        output.push_str(&format!(
+                            "- {} ({}): {}\n",
+                            issue.key, url, issue.fields.summary
+                        ));
+                    } else {
+                        output.push_str(&format!(
+                            "- {}: {}\n",
+                            issue.key, issue.fields.summary
+                        ));
+                    }
                     if let Some(status) = &issue.fields.status {
                         output.push_str(&format!("  Status: {}\n", status.name));
                     }
