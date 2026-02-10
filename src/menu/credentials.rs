@@ -121,11 +121,10 @@ fn prompt_jira_credentials() -> Result<()> {
 // ===== Token Management =====
 
 fn load_env_var(key: &str, prompt_msg: &str, required: bool) -> Result<Option<String>> {
-    if let Ok(value) = env::var(key) {
-        if !value.is_empty() {
+    if let Ok(value) = env::var(key)
+        && !value.is_empty() {
             return Ok(Some(value));
         }
-    }
 
     if !required {
         return Ok(None);
