@@ -16,7 +16,7 @@
 
 ---
 
-**Gazette** automatically generates well-structured changelogs from your GitHub Pull Requests, enriched with Jira context and summarized by Google Gemini AI.
+**Gazette** automatically generates well-structured changelogs from your GitHub Pull Requests, enriched with Jira context and summarized by a LLM.
 
 ## Features
 
