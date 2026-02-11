@@ -22,7 +22,7 @@
 
 - 📋 **GitHub Integration** — Fetches merged PRs from your repositories
 - 🎫 **Jira Context** — Automatically extracts and enriches changelogs with Jira ticket information
-- 🤖 **AI-Powered** — Uses Google Gemini to generate concise, well-structured changelogs
+- 🤖 **AI-Powered** — Uses Claude, OpenAI, Google Gemini or Ollama to generate concise, well-structured changelogs
 - ⏱️ **Configurable Time Periods** — Filter PRs by last hour, 6h, 12h, 24h, or custom periods
 - 📦 **Repository Subscriptions** — Subscribe to multiple repos and generate changelogs in batch
 - 🔐 **Credential Management** — Securely stores API tokens in a local `.env` file
